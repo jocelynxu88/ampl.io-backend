@@ -1,2 +1,2 @@
-# ru-hacks-goal-back
+# ampl.io-backend
 yay!
