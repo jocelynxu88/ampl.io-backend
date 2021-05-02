@@ -47,9 +47,18 @@ def getGoals(username):
     try:
         doc_ref = db.collection('users').document(username).collection('Goals').stream()
 
-        arr = [doc.to_dict() for doc in doc_ref]
+        arr = [doc.to_dict()['goalId'] for doc in doc_ref]
 
-        return jsonify(arr), 200
+        print(arr)
+        
+        goalArr = []
+
+        for goalId in arr:
+            goalArr.append({**db.collection('Goals').document(goalId).get().to_dict(), **{'goalId' : goalId}})
+
+        print(goalArr)
+
+        return jsonify(goalArr), 200
     except Exception as e:
         print("yikes: ", e)
         return 'bad', 400
@@ -77,11 +86,31 @@ def match(username):
         print("uh oh", e)
         return []
 
+@app.route('/toggleGoal/<username>/<goalId>', methods = ["POST"])
+def toggleGoal(username, goalId):
+    try:
+        doc_ref = db.collection('Goals').document(goalId)
+
+        oldDoc = doc_ref.get().to_dict()
+
+        newComplete = oldDoc['complete'][:]
+        newIncomplete = oldDoc['incomplete'][:]
+
+        if request.json['complete']:
+            doc_ref.update({'complete' : firestore.ArrayUnion([username]), 'incomplete' : firestore.ArrayRemove([username])})
+        elif not request.json['complete']:
+            doc_ref.update({'incomplete' : firestore.ArrayUnion([username]), 'complete' : firestore.ArrayRemove([username])})
+        
+        return "good", 200
+    except Exception as e:
+        print(e)
+        return "bad", 400
+        
 
 @app.route('/createGoal/<username>', methods = ['POST'])
 def goals(username):
     try:
-        doc_ref = db.collection('users').document(username).collection('Goals')
+        doc_ref = db.collection('Goals')
 
         friends = []
         if 'friends' in request.json.keys():
@@ -89,9 +118,15 @@ def goals(username):
         else:
             friends = match(username)
 
-        doc_ref.add({'name' : request.json['name'], 'frequency' : request.json['frequency'], 
+        newDoc = doc_ref.add({'name' : request.json['name'], 'frequency' : request.json['frequency'], 
         'category' : request.json['category'], 'complete' : [], 'incomplete' : friends})
-        print("USERNAME: " + username)
+
+        newDoc = newDoc[1].id
+
+        for friend in friends:
+            doc_ref = db.collection('users').document(friend).collection('Goals')
+            doc_ref.add({'goalId': newDoc})
+
         print(request.json)
         return "good", 200
     except Exception as e:
