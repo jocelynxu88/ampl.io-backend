@@ -1,5 +1,7 @@
 from flask import Flask, jsonify
 from flask import request
+import string
+import random
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -41,6 +43,21 @@ def getUsername(FriendCode):
     except Exception as e:
         print(e)
         return "bad", 400
+
+@app.route('/getFriendCode', methods = ['GET'])
+def getFriendCode():
+    user_ref = db.collection('users').document(request.args.get('username'));
+    user = user_ref.get();
+
+    if user.exists:
+        user_code = user.to_dict();
+        return {"FriendCode": user_code['FriendCode']}, 200
+
+    else:
+        FriendCode = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9));
+        user_ref.set({'FriendCode': FriendCode});
+        return {"FriendCode": FriendCode}, 200
+            
 
 @app.route('/getGoals/<username>', methods = ['GET'])
 def getGoals(username):
@@ -127,6 +144,17 @@ def goals(username):
             doc_ref = db.collection('users').document(friend).collection('Goals')
             doc_ref.add({'goalId': newDoc})
 
+        
+        group_ref = db.collection(u'GroupChats').add({'members': friends, 'Messages': [], 'category': request.json['category']});
+
+        for i in (friends): #creating group chat for the new team
+            user_ref = db.collection(u'UserMessages').document(i);
+            if user_ref.get().exists:
+                user_ref.update({u'Groups': firestore.ArrayUnion([{'ChatId': group_ref[1].id, 'name': request.json['name'], 'read': True}])});
+            else:
+                user_ref.set({u'Groups': [{'ChatId': group_ref[1].id, 'name': request.json['name'], 'read': True}]});
+
+        print("USERNAME: " + username)
         print(request.json)
         return "good", 200
     except Exception as e:
