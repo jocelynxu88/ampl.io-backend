@@ -1,5 +1,7 @@
 from flask import Flask, jsonify
 from flask import request
+import string
+import random
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -41,6 +43,21 @@ def getUsername(FriendCode):
     except Exception as e:
         print(e)
         return "bad", 400
+
+@app.route('/getFriendCode', methods = ['GET'])
+def getFriendCode():
+    user_ref = db.collection('users').document(request.args.get('username'));
+    user = user_ref.get();
+
+    if user.exists:
+        user_code = user.to_dict();
+        return {"FriendCode": user_code['FriendCode']}, 200
+
+    else:
+        FriendCode = ''.join(random.choices(string.ascii_uppercase + string.digits, k=9));
+        user_ref.set({'FriendCode': FriendCode});
+        return {"FriendCode": FriendCode}, 200
+            
 
 @app.route('/getGoals/<username>', methods = ['GET'])
 def getGoals(username):
