@@ -29,6 +29,19 @@ def hello_world():
         print(u'{} => {}'.format(doc.id, doc.to_dict()))
     return 'Hello, Worldd!'
 
+@app.route('/getUsername/<FriendCode>', methods = ['GET'])
+def getUsername(FriendCode):
+    try:
+        doc_ref = db.collection('users').where('FriendCode', '==', FriendCode).stream()
+        doc_ref = list(doc_ref)
+
+        print(doc_ref)
+        
+        return doc_ref[0].id, 200
+    except Exception as e:
+        print(e)
+        return "bad", 400
+
 @app.route('/getGoals/<username>', methods = ['GET'])
 def getGoals(username):
     try:
