@@ -91,6 +91,17 @@ def goals(username):
 
         doc_ref.add({'name' : request.json['name'], 'frequency' : request.json['frequency'], 
         'category' : request.json['category'], 'complete' : [], 'incomplete' : friends})
+
+        
+        group_ref = db.collection(u'GroupChats').add({'members': friends, 'Messages': [], 'category': request.json['category']});
+
+        for i in (friends): #creating group chat for the new team
+            user_ref = db.collection(u'UserMessages').document(i);
+            if user_ref.get().exists:
+                user_ref.update({u'Groups': firestore.ArrayUnion([{'ChatId': group_ref[1].id, 'name': request.json['name'], 'read': True}])});
+            else:
+                user_ref.set({u'Groups': [{'ChatId': group_ref[1].id, 'name': request.json['name'], 'read': True}]});
+
         print("USERNAME: " + username)
         print(request.json)
         return "good", 200
